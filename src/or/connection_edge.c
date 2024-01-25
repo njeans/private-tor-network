@@ -808,6 +808,12 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
            escaped_safe_str(conn->address), conn->port,
            safe_str(fmt_and_decorate_addr(&conn->addr)));
 
+  log_info(LD_APP, "!!! stream_id %d destination %s:%u", edge_conn->stream_id,
+           escaped_safe_str(conn->address), conn->port);
+//  FILE *fp = tor_fopen_cloexec("/private-tor-network/src/input_data", "w");
+//  fprintf(fp, "%s\n", escaped_safe_str(conn->address));
+//  fclose(fp);
+
   rep_hist_note_exit_stream_opened(conn->port);
 
   conn->state = EXIT_CONN_STATE_OPEN;
@@ -2965,6 +2971,11 @@ connection_ap_handshake_send_begin,(entry_connection_t *ap_conn))
     set_uint32(payload + payload_len, htonl(edge_conn->begincell_flags));
     payload_len += 4;
   }
+
+  log_info(LD_APP,
+           "!!! stream_id %d destination %s",
+           edge_conn->stream_id,
+           payload);
 
   log_info(LD_APP,
            "Sending relay cell %d on circ %u to begin stream %d.",
