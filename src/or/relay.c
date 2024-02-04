@@ -80,6 +80,7 @@
 #include "routerparse.h"
 #include "scheduler.h"
 #include "rephist.h"
+#include "crypto_digest.h"
 
 static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
                                             cell_direction_t cell_direction,
@@ -558,6 +559,14 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
   relay_header_pack(cell.payload, &rh);
   if (payload_len)
     memcpy(cell.payload+RELAY_HEADER_SIZE, payload, payload_len);
+
+  uint8_t digest[DIGEST256_LEN+1] = {0};
+  char digest_s[DIGEST256_LEN*2+1] = {0};
+  crypto_digest256(digest, (const char *)cell.payload, CELL_PAYLOAD_SIZE, DIGEST_SHA256);
+  for (int j = 0; j <= DIGEST256_LEN; j++ ) {
+    sprintf(digest_s+j*2, "%02X", digest[j]);
+  }
+  log_info(LD_OR,"STING_TRACE Sending cell hash %s circ_id %d stream_id %d relay_cmd %d cell_cmd %d", digest_s, cell.circ_id, stream_id, relay_command, cell.command);
 
   log_debug(LD_OR,"delivering %d cell %s.", relay_command,
             cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
@@ -1465,6 +1474,13 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         ;
     }
   }
+  uint8_t digest[DIGEST256_LEN+1] = {0};
+  char digest_s[DIGEST256_LEN*2+1] = {0};
+  crypto_digest256((char *)digest, (const char *)cell->payload, CELL_PAYLOAD_SIZE, DIGEST_SHA256);
+  for (int j = 0; j <= DIGEST256_LEN; j++ ) {
+    sprintf(digest_s+(j*2), "%02X", digest[j]);
+  }
+  log_info(domain,"STING_TRACE Received cell hash %s circ_id %d stream_id %d relay_cmd %d cell_cmd %d", digest_s, cell->circ_id, rh.stream_id, rh.command, cell->command );
 
   /* either conn is NULL, in which case we've got a control cell, or else
    * conn points to the recognized stream. */
